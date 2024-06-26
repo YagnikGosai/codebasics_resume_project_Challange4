@@ -35,23 +35,26 @@ ORDER BY product_count DESC;
 
 -- 4. Follow-up: Which segment had the most increase in unique products in 2021 vs 2020? The final output contains these fields: segment,product_count_2020,product_count_2021,difference
 
-WITH unique_product AS
-(
- SELECT
-      b.segment AS segment,
-      COUNT(DISTINCT
-          (CASE 
-              WHEN fiscal_year = 2020 THEN a.product_code END)) AS product_count_2020,
-       COUNT(DISTINCT
-          (CASE 
-              WHEN fiscal_year = 2021 THEN a.product_code END)) AS product_count_2021        
- FROM fact_sales_monthly AS a
- INNER JOIN dim_product AS b
- ON a.product_code = b.product_code
- GROUP BY b.segment
-)
-SELECT segment, product_count_2020, product_count_2021, (product_count_2021-product_count_2020) AS difference
-FROM unique_product
+WITH cte1 AS(
+SELECT 
+    dp.segment,
+    COUNT(DISTINCT (CASE
+            WHEN fsm.fiscal_year = 2020 THEN dp.product_code
+        END)) AS unique_products_2020,
+    COUNT(DISTINCT (CASE
+            WHEN fsm.fiscal_year = 2021 THEN dp.product_code
+        END)) AS unique_products_2021
+FROM
+    dim_product dp
+        JOIN
+    fact_sales_monthly fsm ON fsm.product_code = dp.product_code
+GROUP BY dp.segment)
+
+SELECT 
+    *,
+    (unique_products_2021 - unique_products_2020) AS difference
+FROM
+    cte1
 ORDER BY difference DESC;
 
 -- 5. Get the products that have the highest and lowest manufacturing costs. The final output should contain these fields, product_code product manufacturing_cost
