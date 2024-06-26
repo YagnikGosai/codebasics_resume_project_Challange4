@@ -77,20 +77,27 @@ ORDER BY manufacturing_cost DESC;
 
 -- 6. Generate a report which contains the top 5 customers who received an average high pre_invoice_discount_pct for the fiscal year 2021 and in the Indian market. The final output contains these fields, customer_code customer average_discount_percentage
 
+WITH cte1 AS(
 SELECT 
-    pic.customer_code,
+    c.customer_code,
     c.customer,
-    ROUND(AVG(pic.pre_invoice_discount_pct), 4) AS average_discount_percentage
+    AVG(fpid.pre_invoice_discount_pct) AS average_discount_percentage,
+    dense_rank() over(order by  AVG(fpid.pre_invoice_discount_pct) desc) as drnk
 FROM
-    fact_pre_invoice_deductions pic
+    fact_pre_invoice_deductions fpid
         JOIN
-    dim_customer c ON pic.customer_code = c.customer_code
+    dim_customer c ON c.customer_code= fpid.customer_code
+WHERE c.market="India" AND fpid.fiscal_year=2021
+GROUP BY c.customer_code,c.customer
+)
+
+ SELECT 
+    customer_code, customer, average_discount_percentage
+FROM
+    cte1
 WHERE
-    pic.fiscal_year = 2021
-        AND c.market = 'India'
-GROUP BY customer_code , customer
-ORDER BY average_discount_percentage DESC
-LIMIT 5;
+    drnk <= 5
+
 
 -- 7. Get the complete report of the Gross sales amount for the customer “Atliq Exclusive” for each month . This analysis helps to get an idea of low and high-performing months and take strategic decisions. The final report contains these columns: Month Year Gross sales Amount
 
